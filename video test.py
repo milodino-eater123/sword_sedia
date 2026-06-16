@@ -1,17 +1,15 @@
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
-from mediapipe.tasks.python.vision import drawing_utils
-from mediapipe.tasks.python.vision import drawing_styles
 import cv2 as cv
 import numpy as np
 import time
-import math
-from carry_sword_45deg import main, drawSkeleton
+from carry_sword_45deg import main
+from helper_functions import drawSkeleton
 
 just_hand = r"C:\Users\samue\OneDrive\Pictures\Camera Roll\WIN_20260506_17_22_40_Pro.mp4"
 sword_sedia = r"C:\Users\samue\Downloads\WIN_20260506_17_13_08_Pro - Trim.mp4"
-long_sword_sedia = r"C:\Users\samue\OneDrive\Pictures\Camera Roll\WIN_20260506_17_13_08_Pro.mp4"
+long_sword_sedia = r"C:\PUsers\samue\OneDrive\Pictures\Camera Roll\WIN_20260506_17_13_08_Pro.mp4"
 cap = cv.VideoCapture(sword_sedia)  
 model_path = r"C:\Users\samue\Downloads\pose_landmarker_full.task"
 hand_model_path = r"C:\Users\samue\Downloads\hand_landmarker.task"
@@ -24,13 +22,8 @@ HandLandmarkerOptions = vision.HandLandmarkerOptions
 RunningMode = vision.RunningMode
 
 state = "start"
-legRaised90 = False
-aspect_ratio = None
 feedback = []
 
-
-
-            
 
 
 options = PoseLandmarkerOptions(
@@ -43,7 +36,6 @@ hand_options = HandLandmarkerOptions(
     num_hands=2,
     min_hand_detection_confidence=0.20,
 )
-
 
 
 with PoseLandmarker.create_from_options(options) as landmarker, \
@@ -62,11 +54,12 @@ with PoseLandmarker.create_from_options(options) as landmarker, \
         pose_result = landmarker.detect_for_video(mp_image, timestamp_ms)
         hand_result = hand_landmarker.detect_for_video(mp_image, timestamp_ms)
 
+        main()
+
+        #PUT TEXT ON SCREEN
         height, width, _ = frame.shape
         aspect_ratio = width / height
-
-        main(pose_result, hand_result)
-
+    
         font_scale = width / 1000
         feedback.append(f"state: {state}")
         for i, line in enumerate(feedback):
@@ -74,10 +67,11 @@ with PoseLandmarker.create_from_options(options) as landmarker, \
             x = (width - text_width) // 2
             y = int(height * 0.1) + i * int(text_height * 1.5)
             cv.putText(frame, line, (x, y), cv.FONT_HERSHEY_SIMPLEX, font_scale, (255, 0, 0), 2)
-
         feedback = []
+        #PUT TEXT ON SCREEN
+        
         frame = cv.cvtColor(frame, cv.COLOR_RGB2BGR)
-        annotated_frame = drawSkeleton(frame, pose_result, hand_result)
+        annotated_frame = drawSkeleton(frame, pose_result,hand_result)
         display = cv.resize(annotated_frame, (1320, 680))
         cv.imshow("Drill Checker", display)
 
