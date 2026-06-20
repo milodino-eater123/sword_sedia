@@ -1,9 +1,21 @@
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import drawing_utils
 from mediapipe.tasks.python.vision import drawing_styles
+import cv2 as cv
 import numpy as np
 
-def drawSkeleton(image1,result,latest_hand_result): 
+
+def draw_feedback(frame, lines, color=(255, 0, 0)):
+    height, width = frame.shape[:2]
+    font_scale = width / 1000
+    for i, line in enumerate(lines):
+        (text_width, text_height), _ = cv.getTextSize(line, cv.FONT_HERSHEY_SIMPLEX, font_scale, 2)
+        x = (width - text_width) // 2
+        y = int(height * 0.1) + i * int(text_height * 1.5)
+        cv.putText(frame, line, (x, y), cv.FONT_HERSHEY_SIMPLEX, font_scale, color, 2)
+
+
+def drawSkeleton(image1,result,latest_hand_result):
     new_image = np.copy(image1)
 
     if result and result.pose_landmarks:

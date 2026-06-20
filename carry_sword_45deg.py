@@ -1,43 +1,10 @@
-import mediapipe as mp
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
-from mediapipe.tasks.python.vision import drawing_utils
-from mediapipe.tasks.python.vision import drawing_styles
-import cv2 as cv
-import time
 import numpy as np
 import math
-
-#intialize variables
-latest_result = None
-state = "start"
-legRaised90 = False
-aspect_ratio = None
-feedback = []
-
-#MEDIAPIPE HANDS STUFF
-
-HandLandmarker = vision.HandLandmarker
-HandLandmarkerOptions = vision.HandLandmarkerOptions
-HandLandmarkerResult = vision.HandLandmarkerResult
-
-hand_model_path = r"C:\Users\samue\Downloads\hand_landmarker.task" 
-latest_hand_result = None
-
-# Hand callback
-def handCallbackFunction(result, image, timestamp):
-    global latest_hand_result
-    latest_hand_result = result
-
-
-def callbackFunction(result,image,timestamp):
-    global latest_result
-    latest_result = result
 
 
 def landmarkDistance(landmark1, landmark2):
     return math.sqrt((landmark1[0] - landmark2[0]) ** 2 + (landmark1[1] - landmark2[1]) ** 2+ (landmark1[2] - landmark2[2]) ** 2)
-def senangDiriCheck(landmarks):
+def senangDiriCheck(landmarks, aspect_ratio):
     left_heel = [landmarks[30].x*aspect_ratio, landmarks[30].y,landmarks[30].z,landmarks[30].visibility]
     right_heel = [landmarks[29].x*aspect_ratio, landmarks[29].y,landmarks[29].z,landmarks[29].visibility]
     
@@ -50,7 +17,7 @@ def senangDiriCheck(landmarks):
         return False, ["Please spread your legs wider for senang diri"]
 
 
-def legRaisedAttempt(landmarks):
+def legRaisedAttempt(landmarks, aspect_ratio):
     left_ankle = [landmarks[28].x*aspect_ratio, landmarks[28].y,landmarks[28].z,landmarks[28].visibility]
     right_ankle = [landmarks[27].x*aspect_ratio, landmarks[27].y,landmarks[27].z,landmarks[27].visibility]
 
@@ -59,7 +26,7 @@ def legRaisedAttempt(landmarks):
     else:
         return False
 
-def sediaCheck(landmarks):
+def sediaCheck(landmarks, aspect_ratio):
     left_heel = [landmarks[30].x*aspect_ratio, landmarks[30].y,landmarks[30].z,landmarks[30].visibility]
     right_heel = [landmarks[29].x*aspect_ratio, landmarks[29].y,landmarks[29].z,landmarks[29].visibility]
     if landmarkDistance(left_heel, right_heel) < 0.05:
@@ -67,20 +34,20 @@ def sediaCheck(landmarks):
     else:
         return False, ["Please bring your legs together for sedia"]
 
-def legRaised90Check(landmarks):
+def legRaised90Check(landmarks, aspect_ratio):
     left_hip = [landmarks[24].x*aspect_ratio, landmarks[24].y]
     left_knee = [landmarks[26].x*aspect_ratio, landmarks[26].y]
     
     return abs(left_hip[1] - left_knee[1]) < 0.02
 
-def swordStraightCheck1(landmarks, hand_landmarks):
+def swordStraightCheck1(landmarks, hand_landmarks, aspect_ratio):
     left_elbow = [landmarks[13].x*aspect_ratio, landmarks[13].y]
     middle_knuckle = [hand_landmarks[9].x*aspect_ratio, hand_landmarks[9].y]
     #in the future, can be relative to shoulder-elbow length for diff body types
     
     return abs(left_elbow[1] - middle_knuckle[1]) < 0.10
 
-def swordStraightCheck2(landmarks, hand_landmarks):
+def swordStraightCheck2(landmarks, hand_landmarks, aspect_ratio):
     left_shoulder = [landmarks[11].x * aspect_ratio, landmarks[11].y, landmarks[11].z]
     left_elbow    = [landmarks[13].x * aspect_ratio, landmarks[13].y, landmarks[13].z]
     left_wrist    = [landmarks[15].x * aspect_ratio, landmarks[15].y, landmarks[15].z]
@@ -96,34 +63,34 @@ def swordStraightCheck2(landmarks, hand_landmarks):
 
 
 #drill detection logic
-def main():
-    global feedback, isFormCorrect,latest_result,sword_detected,state,legRaised90,aspect_ratio
-    if not latest_result or not latest_result.pose_landmarks:
-        return
+def main(pose_result, hand_result, aspect_ratio, state, legRaised90):
+    """Advances the drill state machine for one frame.
 
-    landmarks = latest_result.pose_landmarks[0]
+    Returns (state, legRaised90, feedback) so callers hold no hidden state.
+    """
+    feedback = []
 
+    if not pose_result or not pose_result.pose_landmarks:
+        return state, legRaised90, feedback
+
+    landmarks = pose_result.pose_landmarks[0]
 
     if state == "start":
-        isCorrect, temp_feedback = senangDiriCheck(landmarks)
+        isCorrect, feedback = senangDiriCheck(landmarks, aspect_ratio)
         if isCorrect:
             state = "senang_diri"
-        else:
-            feedback = temp_feedback
 
     #if senang diri, check if transition to leg raised attempt
     elif state == "senang_diri":
-        isCorrect, temp_feedback = senangDiriCheck(landmarks)
+        isCorrect, feedback = senangDiriCheck(landmarks, aspect_ratio)
         if not isCorrect:
-            feedback = temp_feedback
             state = "start"
-        else:
-            if legRaisedAttempt(landmarks):
-                state = "leg_raised_attempt"
-    
+        elif legRaisedAttempt(landmarks, aspect_ratio):
+            state = "leg_raised_attempt"
+
     elif state == "leg_raised_attempt":
-        isCorrect= legRaisedAttempt(landmarks)
-        if legRaised90Check(landmarks):
+        isCorrect = legRaisedAttempt(landmarks, aspect_ratio)
+        if legRaised90Check(landmarks, aspect_ratio):
             legRaised90 = True
         if not isCorrect:
             if legRaised90:
@@ -133,14 +100,6 @@ def main():
                 state = "senang_diri"
 
     elif state == "sedia":
-        isCorrect, temp_feedback = sediaCheck(landmarks)
-        if not isCorrect:
-            feedback = temp_feedback
-    
+        isCorrect, feedback = sediaCheck(landmarks, aspect_ratio)
 
-
-            
-
-
-
-
+    return state, legRaised90, feedback
