@@ -1,0 +1,1 @@
+#plan structure of sword sedia logic

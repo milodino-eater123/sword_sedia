@@ -4,13 +4,16 @@ from mediapipe.tasks.python import vision
 import cv2 as cv
 import numpy as np
 import time
-from carry_sword_45deg import main
-from helper_functions import drawSkeleton
+from legacy.carry_sword_45deg import main
+from utils.helper_functions import drawSkeleton
 
-just_hand = r"C:\Users\samue\OneDrive\Pictures\Camera Roll\WIN_20260506_17_22_40_Pro.mp4"
-sword_sedia = r"C:\Users\samue\Downloads\WIN_20260506_17_13_08_Pro - Trim.mp4"
-long_sword_sedia = r"C:\PUsers\samue\OneDrive\Pictures\Camera Roll\WIN_20260506_17_13_08_Pro.mp4"
-cap = cv.VideoCapture(sword_sedia)  
+VIDEOS = {
+    "just_hand": r"C:\Users\samue\OneDrive\Pictures\Camera Roll\WIN_20260506_17_22_40_Pro.mp4",
+    "sword_sedia": r"C:\Users\samue\Downloads\WIN_20260506_17_13_08_Pro - Trim.mp4",
+    "long_sword_sedia": r"C:\Users\samue\OneDrive\Pictures\Camera Roll\WIN_20260506_17_13_08_Pro.mp4",
+}
+
+cap = cv.VideoCapture(VIDEOS["sword_sedia"])
 model_path = r"C:\Users\samue\Downloads\pose_landmarker_full.task"
 hand_model_path = r"C:\Users\samue\Downloads\hand_landmarker.task"
 
